@@ -126,15 +126,23 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
 .qz-question{background:linear-gradient(135deg,#4F46E5,#6D28D9);border-radius:18px;
   padding:28px 20px;text-align:center;margin-bottom:20px;color:#fff}
 .qz-q-word{display:none}
-.qz-q-reading{font-size:44px;font-weight:700;margin-top:4px}
+.qz-q-reading{font-size:44px;font-weight:700;margin-top:4px;letter-spacing:2px}
 .qz-q-lbl{font-size:13px;opacity:.65;margin-bottom:10px}
-.choice-btn{display:block;width:100%;padding:16px 18px;border:2px solid var(--bdr);
-  border-radius:14px;background:#fff;font-size:16px;font-weight:500;cursor:pointer;
-  margin-bottom:10px;text-align:left;transition:all .2s;color:var(--txt)}
+.qz-q-pos{font-size:12px;background:rgba(255,255,255,.2);border-radius:99px;
+  padding:3px 10px;display:inline-block;margin-top:10px}
+.choice-btn{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;
+  border:2px solid var(--bdr);border-radius:14px;background:#fff;font-size:16px;
+  font-weight:500;cursor:pointer;margin-bottom:10px;text-align:left;
+  transition:all .2s;color:var(--txt)}
 .choice-btn:active{transform:scale(.98)}
+.choice-label{width:28px;height:28px;border-radius:50%;background:var(--pri);
+  color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
 .choice-btn.correct{border-color:var(--grn);background:#D1FAE5;color:#065F46}
+.choice-btn.correct .choice-label{background:var(--grn)}
 .choice-btn.wrong{border-color:var(--red);background:#FEE2E2;color:#991B1B}
-.choice-btn.disabled{cursor:default;opacity:.6}
+.choice-btn.wrong .choice-label{background:var(--red)}
+.choice-btn.disabled{cursor:default;opacity:.7}
 .qz-score{text-align:center;padding:30px 20px}
 .qz-score h2{font-size:28px;font-weight:800;margin:16px 0 8px}
 .score-circle{width:120px;height:120px;border-radius:50%;border:6px solid var(--pri);
@@ -295,9 +303,10 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
   <div class="qz-prog"><div class="qz-prog-fill" id="qz-prog" style="width:0%"></div></div>
   <div id="qz-body" class="qz-body">
     <div class="qz-question">
-      <div class="qz-q-lbl">「___」的意思是？</div>
+      <div class="qz-q-lbl">下列哪個是正確的意思？</div>
       <div class="qz-q-word" id="qz-word" style="display:none"></div>
-      <div class="qz-q-reading" id="qz-reading" style="font-size:44px;font-weight:700">きかい</div>
+      <div class="qz-q-reading" id="qz-reading">きかい</div>
+      <div class="qz-q-pos" id="qz-pos">名</div>
     </div>
     <div id="qz-choices"></div>
   </div>
@@ -4454,6 +4463,8 @@ function loadQZQuestion() {
   document.getElementById('qz-prog').style.width = (qzSession.idx/qzSession.words.length*100)+'%';
   document.getElementById('qz-word').textContent = w.k;
   document.getElementById('qz-reading').textContent = w.r;
+  const posEl = document.getElementById('qz-pos');
+  if (posEl) posEl.textContent = w.p;
   qzSession.answered = false;
 
   // build 4 choices
@@ -4461,10 +4472,11 @@ function loadQZQuestion() {
   const choices = [w, ...wrong].sort(() => Math.random()-0.5);
   const el = document.getElementById('qz-choices');
   el.innerHTML = '';
-  choices.forEach(c => {
+  const labels = ['A','B','C','D'];
+  choices.forEach((c, i) => {
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
-    btn.textContent = c.m;
+    btn.innerHTML = `<span class="choice-label">${labels[i]}</span><span>${c.m}</span>`;
     btn.onclick = () => answerQuiz(btn, c.id === w.id, w.id);
     el.appendChild(btn);
   });
@@ -4478,7 +4490,8 @@ function answerQuiz(btn, isCorrect, correctId) {
   else {
     btn.classList.add('wrong');
     document.querySelectorAll('.choice-btn').forEach(b => {
-      if (b.textContent === correctMeaning) b.classList.add('correct');
+      const span = b.querySelectorAll('span')[1];
+      if (span && span.textContent === correctMeaning) b.classList.add('correct');
     });
     updateWordProg(correctId, 0);
   }
