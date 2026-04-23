@@ -239,6 +239,26 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
 .legend-left{display:flex;align-items:center;gap:12px;font-weight:500}
 .legend-dot{width:12px;height:12px;border-radius:4px}
 
+/* SPEAK BUTTONS */
+.speak-fab{background:rgba(255,255,255,.22);border:none;color:#fff;border-radius:99px;
+  padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;
+  display:inline-flex;align-items:center;gap:7px;backdrop-filter:blur(4px);
+  transition:background .2s;letter-spacing:.3px}
+.speak-fab:active{background:rgba(255,255,255,.4);transform:scale(.96)}
+.speak-fab svg{width:16px;height:16px}
+.speak-fab.playing{background:rgba(255,255,255,.38)}
+.speak-ex-btn{background:var(--bg);border:1.5px solid var(--bdr);color:var(--pri);
+  border-radius:99px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;
+  margin-top:10px;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.speak-ex-btn:active{background:var(--bdr);transform:scale(.97)}
+.speak-ex-btn.hidden{display:none}
+.speak-modal-row{display:flex;gap:10px;justify-content:center;margin:10px 0 16px}
+.speak-modal-btn{background:var(--bg);border:1.5px solid var(--bdr);color:var(--pri);
+  border-radius:99px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:all .2s}
+.speak-modal-btn:active{background:var(--bdr);transform:scale(.97)}
+.speak-modal-btn svg{width:16px;height:16px}
+
 /* TOAST */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
   background:#111827;color:#fff;padding:11px 20px;border-radius:99px;font-size:14px;
@@ -307,7 +327,11 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
             <div class="fc-pos-badge" id="fc-pos-front">名詞</div>
             <div class="fc-kanji" id="fc-kanji">機会</div>
             <div class="fc-reading" id="fc-reading">きかい</div>
-            <div class="fc-hint">👆 點擊翻轉</div>
+            <button class="speak-fab" id="fc-speak-btn" onclick="event.stopPropagation();speakFC()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              聽發音
+            </button>
+            <div class="fc-hint" style="margin-top:10px">👆 點擊翻轉</div>
           </div>
           <div class="flip-back">
             <div class="back-kanji" id="bc-kanji">機会</div>
@@ -315,6 +339,10 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
             <div class="back-meaning" id="bc-meaning">機會</div>
             <div class="back-pos" id="bc-pos">名詞</div>
             <div class="back-ex" id="bc-ex"></div>
+            <button class="speak-ex-btn hidden" id="fc-speak-ex" onclick="event.stopPropagation();speakFCEx()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              聽例句
+            </button>
           </div>
         </div>
       </div>
@@ -349,6 +377,10 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
       <div class="qz-q-word" id="qz-word" style="display:none"></div>
       <div class="qz-q-reading" id="qz-reading">きかい</div>
       <div class="qz-q-pos" id="qz-pos">名</div>
+      <button class="speak-fab" style="margin:12px auto 0;display:flex" onclick="speakQZ()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        聽發音
+      </button>
     </div>
     <div id="qz-choices"></div>
   </div>
@@ -444,6 +476,16 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
     <div class="modal-handle"></div>
     <div class="modal-kanji" id="m-kanji"></div>
     <div class="modal-reading" id="m-reading"></div>
+    <div class="speak-modal-row">
+      <button class="speak-modal-btn" onclick="speakModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        聽單字
+      </button>
+      <button class="speak-modal-btn" id="m-speak-ex-btn" onclick="speakModalEx()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        聽例句
+      </button>
+    </div>
     <div class="modal-meaning" id="m-meaning"></div>
     <div class="modal-pos" id="m-pos"></div>
     <div class="modal-ex" id="m-ex" style="display:none">
@@ -4352,6 +4394,42 @@ let curScreen = 'home';
 let wordFilter = 'all';
 let fcSession = { words:[], idx:0, correct:0, wrong:0, flipped:false };
 let qzSession = { words:[], idx:0, correct:0, answered:false };
+let currentModalWord = null;
+
+// ===================== TTS =====================
+function speak(text, rate = 0.95) {
+  if (!window.speechSynthesis) { showToast('裝置不支援語音功能'); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP';
+  u.rate = rate;
+  u.pitch = 1.0;
+  // pick Japanese voice if available
+  const voices = speechSynthesis.getVoices();
+  const jaVoice = voices.find(v => v.lang === 'ja-JP') || voices.find(v => v.lang.startsWith('ja'));
+  if (jaVoice) u.voice = jaVoice;
+  speechSynthesis.speak(u);
+}
+function speakFC() {
+  const w = fcSession.words[fcSession.idx];
+  if (w) speak(w.k);
+}
+function speakFCEx() {
+  const w = fcSession.words[fcSession.idx];
+  if (w && w.ex) speak(w.ex, 0.85);
+  else showToast('此單字沒有例句');
+}
+function speakQZ() {
+  const w = qzSession.words[qzSession.idx];
+  if (w) speak(w.k);
+}
+function speakModal() {
+  if (currentModalWord) speak(currentModalWord.k);
+}
+function speakModalEx() {
+  if (currentModalWord && currentModalWord.ex) speak(currentModalWord.ex, 0.85);
+  else showToast('此單字沒有例句');
+}
 
 // ===================== NAVIGATION =====================
 function navigate(screen) {
@@ -4449,8 +4527,11 @@ function loadFCCard() {
   const exEl = document.getElementById('bc-ex');
   if (w.ex) { exEl.innerHTML = '<b>例：</b>'+w.ex+'<br>'+w.exm; exEl.style.display='block'; }
   else { exEl.style.display='none'; }
+  document.getElementById('fc-speak-ex').classList.toggle('hidden', !w.ex);
   document.getElementById('flip-inner').classList.remove('flipped');
   fcSession.flipped = false;
+  // auto-speak the word
+  setTimeout(() => speak(w.k), 400);
 }
 
 function flipCard() {
@@ -4508,6 +4589,8 @@ function loadQZQuestion() {
   const posEl = document.getElementById('qz-pos');
   if (posEl) posEl.textContent = w.p;
   qzSession.answered = false;
+  // auto-speak
+  setTimeout(() => speak(w.k), 350);
 
   // build 4 choices
   const wrong = WORDS.filter(x => x.id !== w.id).sort(() => Math.random()-0.5).slice(0,3);
@@ -4593,10 +4676,13 @@ function renderWordList() {
 // ===================== WORD MODAL =====================
 function showWordModal(id) {
   const w = WORDS.find(x => x.id === id);
+  currentModalWord = w;
   const wp = getWordProg(id);
   document.getElementById('m-kanji').textContent = w.k;
   document.getElementById('m-reading').textContent = w.r;
   document.getElementById('m-meaning').textContent = w.m;
+  const exBtn = document.getElementById('m-speak-ex-btn');
+  if (exBtn) exBtn.style.opacity = w.ex ? '1' : '0.4';
   const posColors = {'名詞':'#4F46E5','動詞':'#059669','形容詞':'#D97706','な形容詞':'#7C3AED','副詞':'#0891B2','接続詞':'#DC2626','表現':'#6B7280'};
   const c = posColors[w.p]||'#6B7280';
   document.getElementById('m-pos').innerHTML = `<span style="background:${c}20;color:${c};padding:4px 12px;border-radius:99px;font-size:13px;font-weight:600">${w.p}</span>`;
