@@ -4530,8 +4530,6 @@ function loadFCCard() {
   document.getElementById('fc-speak-ex').classList.toggle('hidden', !w.ex);
   document.getElementById('flip-inner').classList.remove('flipped');
   fcSession.flipped = false;
-  // auto-speak the word
-  setTimeout(() => speak(w.k), 400);
 }
 
 function flipCard() {
@@ -4589,8 +4587,6 @@ function loadQZQuestion() {
   const posEl = document.getElementById('qz-pos');
   if (posEl) posEl.textContent = w.p;
   qzSession.answered = false;
-  // auto-speak
-  setTimeout(() => speak(w.k), 350);
 
   // build 4 choices
   const wrong = WORDS.filter(x => x.id !== w.id).sort(() => Math.random()-0.5).slice(0,3);
