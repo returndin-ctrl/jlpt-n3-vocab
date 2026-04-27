@@ -5118,6 +5118,7 @@ function getGrammarProg(id) {
 function updateGrammarProg(id, q) {
   const prog = loadGProg();
   const gp = prog[id] || { status:'new', interval:0, reps:0, ef:2.5, next:null, reviews:0, correct:0 };
+  const wasNew = gp.status === 'new';
   gp.reviews++;
   if (q >= 2) gp.correct++;
   if (q === 0) {
@@ -5134,7 +5135,9 @@ function updateGrammarProg(id, q) {
     gp.reps++;
     gp.status = gp.interval >= 21 ? 'learned' : 'learning';
   }
-  const d = new Date(); d.setDate(d.getDate() + gp.interval);
+  const d = new Date();
+  // 第一次學的新文法當天就能進入複習，後續才依 SRS 間隔排程
+  if (!wasNew) d.setDate(d.getDate() + gp.interval);
   gp.next = d.toISOString().split('T')[0];
   prog[id] = gp;
   saveGProg(prog);
