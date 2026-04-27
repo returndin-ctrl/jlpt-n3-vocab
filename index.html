@@ -4342,6 +4342,7 @@ function getWordProg(id) {
 function updateWordProg(id, q) { // q: 0=wrong,1=hard,2=ok,3=easy
   const prog = loadProg();
   const wp = prog[id] || { status:'new', interval:0, reps:0, ef:2.5, next:null, reviews:0, correct:0 };
+  const wasNew = wp.status === 'new';
   wp.reviews++;
   if (q >= 2) wp.correct++;
   if (q === 0) {
@@ -4358,7 +4359,9 @@ function updateWordProg(id, q) { // q: 0=wrong,1=hard,2=ok,3=easy
     wp.reps++;
     wp.status = wp.interval >= 21 ? 'learned' : 'learning';
   }
-  const d = new Date(); d.setDate(d.getDate() + wp.interval);
+  const d = new Date();
+  // 第一次學的新單字當天就能進入複習，後續才依 SRS 間隔排程
+  if (!wasNew) d.setDate(d.getDate() + wp.interval);
   wp.next = d.toISOString().split('T')[0];
   prog[id] = wp;
   saveProg(prog);
