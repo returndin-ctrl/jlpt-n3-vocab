@@ -199,6 +199,7 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
 .word-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .dot-new{background:#D1D5DB}
 .dot-learning{background:var(--org)}
+.dot-quiz{background:var(--blu)}
 .dot-learned{background:var(--grn)}
 .word-main{flex:1;min-width:0}
 .word-kanji{font-size:18px;font-weight:700;color:var(--txt)}
@@ -310,7 +311,7 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
   </div>
   <button class="btn btn-pri" onclick="startFlashcard('due')">📚 開始複習</button>
   <button class="btn btn-sec" onclick="startFlashcard('new')">✨ 學新單字</button>
-  <button class="btn btn-grn" onclick="startQuiz()">🎯 選擇題測驗</button>
+  <button class="btn btn-grn" id="quiz-btn" onclick="startQuiz()">🎯 選擇題測驗</button>
 </div>
 
 <!-- ===== FLASHCARD ===== -->
@@ -349,11 +350,14 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
         </div>
       </div>
     </div>
-    <div class="fc-btns">
+    <div class="fc-btns" id="fc-btns-rate">
       <button class="rate-btn r0" onclick="rateCard(0)"><span class="icon">😵</span>忘記</button>
       <button class="rate-btn r1" onclick="rateCard(1)"><span class="icon">🤔</span>模糊</button>
       <button class="rate-btn r2" onclick="rateCard(2)"><span class="icon">😊</span>記得</button>
       <button class="rate-btn r3" onclick="rateCard(3)"><span class="icon">⚡</span>簡單</button>
+    </div>
+    <div class="fc-btns" id="fc-btns-next" style="display:none;grid-template-columns:1fr">
+      <button class="rate-btn" style="background:linear-gradient(135deg,var(--pri),var(--acc));color:#fff;font-size:15px;padding:14px" onclick="nextLearnCard()">下一張 →</button>
     </div>
   </div>
   <div class="fc-done" id="fc-done" style="display:none">
@@ -408,6 +412,7 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
     <button class="filter-tab active" data-filter="all" onclick="setFilter(this,'all')">全部</button>
     <button class="filter-tab" data-filter="new" onclick="setFilter(this,'new')">未學</button>
     <button class="filter-tab" data-filter="learning" onclick="setFilter(this,'learning')">學習中</button>
+    <button class="filter-tab" data-filter="quiz" onclick="setFilter(this,'quiz')">考試中</button>
     <button class="filter-tab" data-filter="learned" onclick="setFilter(this,'learned')">已掌握</button>
     <button class="filter-tab" data-filter="名詞" onclick="setFilter(this,'名詞')">名詞</button>
     <button class="filter-tab" data-filter="動詞" onclick="setFilter(this,'動詞')">動詞</button>
@@ -431,6 +436,10 @@ body{background:var(--bg);color:var(--txt);user-select:none;-webkit-user-select:
     <div class="legend-row">
       <div class="legend-left"><div class="legend-dot" style="background:#D97706"></div>學習中</div>
       <strong id="st-learning">0</strong>
+    </div>
+    <div class="legend-row">
+      <div class="legend-left"><div class="legend-dot" style="background:#3B82F6"></div>考試中</div>
+      <strong id="st-quiz">0</strong>
     </div>
     <div class="legend-row">
       <div class="legend-left"><div class="legend-dot" style="background:#059669"></div>已掌握</div>
@@ -4667,28 +4676,46 @@ const GRAMMAR = [
 // ===================== SRS & PROGRESS =====================
 const PROG_KEY = 'n3_prog_v2';
 const META_KEY = 'n3_meta_v2';
+const QUIZ_THRESHOLD = 4; // 累積到此分數即進入考試範圍
 
 function loadProg() { return JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); }
 function saveProg(p) { localStorage.setItem(PROG_KEY, JSON.stringify(p)); }
 function loadMeta() { return JSON.parse(localStorage.getItem(META_KEY) || '{"streak":0,"lastDate":"","totalReviews":0,"totalCorrect":0}'); }
 function saveMeta(m) { localStorage.setItem(META_KEY, JSON.stringify(m)); }
 
-function getWordProg(id) {
-  const p = loadProg();
-  return p[id] || { status:'new', interval:0, reps:0, ef:2.5, next:null, reviews:0, correct:0 };
+function defaultWordProg() {
+  return { status:'new', score:0, interval:0, reps:0, ef:2.5, next:null, reviews:0, correct:0 };
 }
 
-function updateWordProg(id, q) { // q: 0=wrong,1=hard,2=ok,3=easy
+function getWordProg(id) {
+  const p = loadProg();
+  return p[id] || defaultWordProg();
+}
+
+function bumpStreak(meta) {
+  const today = new Date().toISOString().split('T')[0];
+  if (meta.lastDate !== today) {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    const yStr = yesterday.toISOString().split('T')[0];
+    meta.streak = meta.lastDate === yStr ? meta.streak + 1 : 1;
+    meta.lastDate = today;
+  }
+}
+
+function updateWordProg(id, q) { // q: 0=wrong,1=hard,2=ok,3=easy（複習評分用）
   const prog = loadProg();
-  const wp = prog[id] || { status:'new', interval:0, reps:0, ef:2.5, next:null, reviews:0, correct:0 };
+  const wp = prog[id] || defaultWordProg();
+  if (wp.score === undefined) wp.score = 0;
   const wasNew = wp.status === 'new';
   wp.reviews++;
   if (q >= 2) wp.correct++;
   if (q === 0) {
     wp.interval = 1; wp.reps = 0; wp.status = 'learning';
+    wp.score = 0;
   } else if (q === 1) {
     wp.interval = Math.max(1, wp.interval < 2 ? 1 : Math.floor(wp.interval * 1.2));
     wp.reps = Math.max(0, wp.reps - 1); wp.status = 'learning';
+    // score 不變
   } else {
     if (wp.reps === 0) wp.interval = 1;
     else if (wp.reps === 1) wp.interval = 6;
@@ -4696,7 +4723,15 @@ function updateWordProg(id, q) { // q: 0=wrong,1=hard,2=ok,3=easy
     if (q === 3) { wp.interval = Math.round(wp.interval * 1.3); wp.ef = Math.min(3.0, wp.ef + 0.15); }
     else { wp.ef = Math.max(1.3, wp.ef + 0.1 - (3-q)*(0.08+(3-q)*0.02)); }
     wp.reps++;
-    wp.status = wp.interval >= 21 ? 'learned' : 'learning';
+    wp.status = 'learning';
+    wp.score += (q === 3 ? 2 : 1);
+  }
+  // 分數達標 → 升級到考試範圍
+  let promoted = false;
+  if (wp.status === 'learning' && wp.score >= QUIZ_THRESHOLD) {
+    wp.status = 'quiz';
+    wp.score = 0;
+    promoted = true;
   }
   const d = new Date();
   // 第一次學的新單字當天就能進入複習，後續才依 SRS 間隔排程
@@ -4708,27 +4743,68 @@ function updateWordProg(id, q) { // q: 0=wrong,1=hard,2=ok,3=easy
   const meta = loadMeta();
   meta.totalReviews++;
   if (q >= 2) meta.totalCorrect++;
-  const today = new Date().toISOString().split('T')[0];
-  if (meta.lastDate !== today) {
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-    const yStr = yesterday.toISOString().split('T')[0];
-    meta.streak = meta.lastDate === yStr ? meta.streak + 1 : 1;
-    meta.lastDate = today;
-  }
+  bumpStreak(meta);
   saveMeta(meta);
-  return wp;
+  return { wp, promoted };
+}
+
+// 學新單字模式只標記為 learning、不更新 SRS interval
+function markWordLearning(id) {
+  const prog = loadProg();
+  const wp = prog[id] || defaultWordProg();
+  if (wp.status !== 'new') return;
+  wp.status = 'learning';
+  wp.score = 0;
+  wp.interval = 1;
+  wp.reps = 0;
+  wp.next = new Date().toISOString().split('T')[0]; // 當天就可進複習
+  prog[id] = wp;
+  saveProg(prog);
+  const meta = loadMeta();
+  bumpStreak(meta);
+  saveMeta(meta);
+}
+
+// 測驗答案：對 → 精熟，錯 → 回到複習並重置分數與間隔
+function quizAnswer(id, isCorrect) {
+  const prog = loadProg();
+  const wp = prog[id] || defaultWordProg();
+  if (wp.score === undefined) wp.score = 0;
+  wp.reviews++;
+  if (isCorrect) {
+    wp.correct++;
+    wp.status = 'learned';
+  } else {
+    wp.status = 'learning';
+    wp.score = 0;
+    wp.interval = 1;
+    wp.reps = 0;
+    wp.next = new Date().toISOString().split('T')[0];
+  }
+  prog[id] = wp;
+  saveProg(prog);
+
+  const meta = loadMeta();
+  meta.totalReviews++;
+  if (isCorrect) meta.totalCorrect++;
+  bumpStreak(meta);
+  saveMeta(meta);
 }
 
 function getDueWords() {
   const today = new Date().toISOString().split('T')[0];
   return WORDS.filter(w => {
     const wp = getWordProg(w.id);
-    return wp.status !== 'new' && (wp.next === null || wp.next <= today);
+    return wp.status === 'learning' && (wp.next === null || wp.next <= today);
   });
 }
 
 function getNewWords(limit=10) {
   return WORDS.filter(w => getWordProg(w.id).status === 'new').slice(0, limit);
+}
+
+function getQuizPool() {
+  return WORDS.filter(w => getWordProg(w.id).status === 'quiz');
 }
 
 // ===================== UI STATE =====================
@@ -4819,6 +4895,9 @@ function updateHome() {
   document.getElementById('stat-new').textContent = nw;
   document.getElementById('stat-learned').textContent = learned;
   document.getElementById('stat-acc').textContent = rev>0 ? Math.round(cor/rev*100)+'%' : '—';
+  const quizCount = getQuizPool().length;
+  const qzBtn = document.getElementById('quiz-btn');
+  if (qzBtn) qzBtn.textContent = quizCount > 0 ? `🎯 選擇題測驗 (${quizCount})` : '🎯 選擇題測驗';
   const pct = Math.round(learned/total*100);
   document.getElementById('prog-bar').style.width = pct+'%';
   document.getElementById('prog-pct').textContent = pct+'%';
@@ -4830,17 +4909,14 @@ function startFlashcard(mode) {
   let words;
   if (mode === 'due') {
     words = getDueWords();
-    if (words.length === 0) {
-      words = getNewWords(10);
-      if (words.length === 0) { showToast('今天沒有需要複習的單字！'); return; }
-    }
+    if (words.length === 0) { showToast('今天沒有需要複習的單字！'); return; }
   } else {
     words = getNewWords(15);
     if (words.length === 0) { showToast('所有單字都已開始學習了！'); return; }
   }
   // shuffle
   words = words.sort(() => Math.random()-0.5).slice(0, 20);
-  fcSession = { words, idx:0, correct:0, wrong:0, flipped:false };
+  fcSession = { words, idx:0, correct:0, wrong:0, flipped:false, mode };
   showFCScreen();
   loadFCCard();
 }
@@ -4853,6 +4929,10 @@ function showFCScreen() {
   sc.classList.add('active');
   document.getElementById('fc-session-body').style.display = 'flex';
   document.getElementById('fc-done').style.display = 'none';
+  const isNew = fcSession.mode === 'new';
+  document.getElementById('fc-btns-rate').style.display = isNew ? 'none' : 'grid';
+  document.getElementById('fc-btns-next').style.display = isNew ? 'grid' : 'none';
+  document.getElementById('fc-title').textContent = isNew ? '學新單字' : '閃卡複習';
 }
 
 function loadFCCard() {
@@ -4885,8 +4965,17 @@ function flipCard() {
 function rateCard(q) {
   if (!fcSession.flipped) { flipCard(); return; }
   const w = fcSession.words[fcSession.idx];
-  updateWordProg(w.id, q);
+  const { promoted } = updateWordProg(w.id, q);
   if (q >= 2) fcSession.correct++; else fcSession.wrong++;
+  if (promoted) showToast(`「${w.k}」進入考試範圍！`);
+  fcSession.idx++;
+  setTimeout(loadFCCard, 200);
+}
+
+function nextLearnCard() {
+  if (!fcSession.flipped) { flipCard(); return; }
+  const w = fcSession.words[fcSession.idx];
+  markWordLearning(w.id);
   fcSession.idx++;
   setTimeout(loadFCCard, 200);
 }
@@ -4894,16 +4983,26 @@ function rateCard(q) {
 function showFCDone() {
   document.getElementById('fc-session-body').style.display = 'none';
   document.getElementById('fc-done').style.display = 'flex';
-  const total = fcSession.correct + fcSession.wrong;
   document.getElementById('fc-done-title').textContent = '本輪完成！🎉';
-  document.getElementById('fc-done-sub').textContent =
-    '答對 '+fcSession.correct+'/'+total+' 張（'+Math.round(fcSession.correct/total*100)+'%）';
+  if (fcSession.mode === 'new') {
+    document.getElementById('fc-done-sub').textContent =
+      `已學 ${fcSession.words.length} 張新單字，可以去複習加深印象！`;
+  } else {
+    const total = fcSession.correct + fcSession.wrong;
+    document.getElementById('fc-done-sub').textContent =
+      total > 0
+        ? '答對 '+fcSession.correct+'/'+total+' 張（'+Math.round(fcSession.correct/total*100)+'%）'
+        : '';
+  }
 }
 
 // ===================== QUIZ =====================
 function startQuiz() {
-  const pool = WORDS.filter(w => getWordProg(w.id).status !== 'new');
-  let words = pool.length >= 10 ? pool : WORDS;
+  let words = getQuizPool();
+  if (words.length === 0) {
+    showToast('目前沒有考試範圍的單字，多複習幾次吧！');
+    return;
+  }
   words = words.sort(() => Math.random()-0.5).slice(0, 10);
   qzSession = { words, idx:0, correct:0, answered:false };
   showQZScreen();
@@ -4950,14 +5049,14 @@ function answerQuiz(btn, isCorrect, correctId) {
   if (qzSession.answered) return;
   qzSession.answered = true;
   const correctMeaning = WORDS.find(x => x.id === correctId)?.m;
-  if (isCorrect) { btn.classList.add('correct'); qzSession.correct++; updateWordProg(correctId, 2); }
+  if (isCorrect) { btn.classList.add('correct'); qzSession.correct++; quizAnswer(correctId, true); }
   else {
     btn.classList.add('wrong');
     document.querySelectorAll('.choice-btn').forEach(b => {
       const span = b.querySelectorAll('span')[1];
       if (span && span.textContent === correctMeaning) b.classList.add('correct');
     });
-    updateWordProg(correctId, 0);
+    quizAnswer(correctId, false);
   }
   document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'));
   setTimeout(() => { qzSession.idx++; loadQZQuestion(); }, 1200);
@@ -4989,7 +5088,7 @@ function renderWordList() {
   const prog = loadProg();
   let list = WORDS;
   if (q) list = list.filter(w => w.k.includes(q)||w.r.includes(q)||w.m.includes(q)||w.p.includes(q));
-  if (['new','learning','learned'].includes(wordFilter)) {
+  if (['new','learning','quiz','learned'].includes(wordFilter)) {
     list = list.filter(w => (prog[w.id]?.status||'new') === wordFilter);
   } else if (['名詞','動詞','形容詞','な形容詞','副詞','接続詞'].includes(wordFilter)) {
     list = list.filter(w => w.p === wordFilter || (wordFilter==='形容詞' && (w.p==='形容詞'||w.p==='な形容詞')));
@@ -4999,7 +5098,7 @@ function renderWordList() {
   el.innerHTML = list.map(w => {
     const wp = prog[w.id];
     const status = wp?.status || 'new';
-    const dotClass = {new:'dot-new',learning:'dot-learning',learned:'dot-learned'}[status];
+    const dotClass = {new:'dot-new',learning:'dot-learning',quiz:'dot-quiz',learned:'dot-learned'}[status];
     return `<div class="word-item" onclick="showWordModal(${w.id})">
       <div class="word-status-dot ${dotClass}"></div>
       <div class="word-main">
@@ -5030,7 +5129,7 @@ function showWordModal(id) {
     document.getElementById('m-ex-jp').textContent = w.ex;
     document.getElementById('m-ex-ch').textContent = w.exm;
   } else { document.getElementById('m-ex').style.display='none'; }
-  const statusLabel = {new:'未學習',learning:'學習中',learned:'已掌握'}[wp.status];
+  const statusLabel = {new:'未學習',learning:'學習中',quiz:'考試中',learned:'已掌握'}[wp.status];
   document.getElementById('m-status').textContent = statusLabel;
   document.getElementById('m-reviews').textContent = wp.reviews||0;
   const today = new Date().toISOString().split('T')[0];
@@ -5371,12 +5470,15 @@ function showGQScore() {
 function renderStats() {
   const prog = loadProg();
   const meta = loadMeta();
-  let nw=0, learning=0, learned=0;
+  let nw=0, learning=0, quiz=0, learned=0;
   let rev=0, cor=0;
   WORDS.forEach(w => {
     const wp = prog[w.id];
     const s = wp?.status||'new';
-    if(s==='new') nw++; else if(s==='learning') learning++; else learned++;
+    if(s==='new') nw++;
+    else if(s==='learning') learning++;
+    else if(s==='quiz') quiz++;
+    else learned++;
     rev += wp?.reviews||0; cor += wp?.correct||0;
   });
   const total = WORDS.length;
@@ -5384,6 +5486,7 @@ function renderStats() {
   document.getElementById('st-pct').textContent = pct+'%';
   document.getElementById('st-new').textContent = nw;
   document.getElementById('st-learning').textContent = learning;
+  document.getElementById('st-quiz').textContent = quiz;
   document.getElementById('st-learned').textContent = learned;
   document.getElementById('st-reviews').textContent = rev;
   document.getElementById('st-acc').textContent = rev>0 ? Math.round(cor/rev*100)+'%' : '—';
