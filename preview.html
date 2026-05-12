@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>N3 新風格預覽</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#F5F3FF;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;padding:20px}
+h1{text-align:center;color:#4F46E5;font-size:20px;margin-bottom:6px}
+p.sub{text-align:center;color:#6B7280;font-size:13px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;max-width:1200px;margin:0 auto}
+.card{background:linear-gradient(145deg,#6366F1,#8B5CF6,#A78BFA);
+  border-radius:24px;padding:18px;color:#fff;
+  box-shadow:0 6px 20px rgba(99,102,241,.20);
+  display:flex;flex-direction:column;align-items:center;text-align:center}
+.card img{width:200px;height:200px;border-radius:16px;object-fit:cover;
+  box-shadow:0 6px 16px rgba(0,0,0,.25);background:#fff;margin-bottom:12px}
+.pos{background:rgba(255,255,255,.22);border-radius:99px;padding:4px 12px;
+  font-size:11px;font-weight:600;margin-bottom:8px}
+.k{font-size:30px;font-weight:700;letter-spacing:1px}
+.r{font-size:15px;opacity:.9;margin-top:2px}
+.m{font-size:13px;opacity:.85;margin-top:6px}
+.id{font-size:10px;opacity:.6;margin-top:4px}
+</style></head><body>
+<h1>新風格預覽（吉卜力 / Anime）</h1>
+<p class="sub">這 20 張已用新風格重生。點下方任一張的圖片可看大圖。</p>
+<div class="grid" id="grid"></div>
+<script>
+const TEST = [
+  {id:1,k:"機会",r:"きかい",m:"機會",p:"名詞"},
+  {id:68,k:"選ぶ",r:"えらぶ",m:"選擇",p:"動詞"},
+  {id:79,k:"泣く",r:"なく",m:"哭",p:"動詞"},
+  {id:131,k:"大切",r:"たいせつ",m:"重要、珍貴",p:"な形容詞"},
+  {id:196,k:"可能",r:"かのう",m:"可能",p:"な形容詞"},
+  {id:294,k:"橋",r:"はし",m:"橋",p:"名詞"},
+  {id:326,k:"洗濯",r:"せんたく",m:"洗衣",p:"名/他動"},
+  {id:476,k:"寝る",r:"ねる",m:"睡覺",p:"自動"},
+  {id:789,k:"天ぷら",r:"てんぷら",m:"天婦羅",p:"名詞"},
+  {id:1100,k:"要点",r:"ようてん",m:"要點",p:"名"},
+  {id:1275,k:"秋",r:"あき",m:"秋天",p:"名"},
+  {id:1500,k:"編集者",r:"へんしゅうしゃ",m:"編輯",p:"名"},
+  {id:1566,k:"廃棄物",r:"はいきぶつ",m:"廢棄物",p:"名"},
+  {id:1700,k:"お世話になる",r:"おせわになる",m:"受人照顧",p:"表現"},
+  {id:2531,k:"幸せ",r:"しあわせ",m:"幸福",p:"名/形動"},
+  {id:3000,k:"畳",r:"たたみ",m:"榻榻米",p:"名"},
+  {id:3300,k:"音読",r:"おんどく",m:"朗讀",p:"名/他動"},
+  {id:3573,k:"月",r:"つき",m:"月亮",p:"名"},
+  {id:3690,k:"以心伝心",r:"いしんでんしん",m:"心心相印",p:"四字"},
+  {id:3711,k:"塵も積もれば山となる",r:"ちりもつもればやまとなる",m:"積少成多",p:"諺語"},
+];
+const grid = document.getElementById('grid');
+TEST.forEach(w => {
+  const idStr = String(w.id).padStart(4,'0');
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="card">
+      <img src="images/${idStr}.jpg" alt="${w.k}">
+      <div class="pos">${w.p}</div>
+      <div class="k">${w.k}</div>
+      <div class="r">${w.r}</div>
+      <div class="m">${w.m}</div>
+      <div class="id">id ${w.id}</div>
+    </div>
+  `);
+});
+</script>
+</body></html>

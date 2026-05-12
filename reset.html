@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Reset</title>
+<style>body{font-family:-apple-system,sans-serif;text-align:center;padding:60px 20px;background:#F5F3FF;color:#111}
+h1{color:#4F46E5}p{color:#6B7280}</style>
+</head><body>
+<h1>清除舊快取中…</h1>
+<p id="status">處理 service worker 與快取</p>
+<script>
+(async () => {
+  const log = m => { document.getElementById('status').textContent = m; };
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      log(`移除 ${regs.length} 個舊 service worker…`);
+      for (const r of regs) { await r.unregister(); }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      log(`清掉 ${keys.length} 組舊快取…`);
+      for (const k of keys) { await caches.delete(k); }
+    }
+    log('完成，2 秒後跳回首頁…');
+    setTimeout(() => { location.replace('./index.html'); }, 1500);
+  } catch (e) {
+    log('失敗：' + e.message);
+  }
+})();
+</script>
+</body></html>
